@@ -1,0 +1,43 @@
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "no", "--save", ""]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      PORT: "3000"
+      NODE_ENV: "production"
+      APP_ORIGIN: "${APP_ORIGIN:-http://localhost:3000}"
+      APP_URL: "${APP_URL:-http://localhost:3000}"
+      REDIS_URL: "redis://redis:6379"
+      TEMP_DIR: "/tmp/clipshort"
+      CONCURRENCY: "${CONCURRENCY:-2}"
+      MAX_VIDEO_DURATION: "${MAX_VIDEO_DURATION:-43200}"
+      JOB_TIMEOUT_MS: "${JOB_TIMEOUT_MS:-300000}"
+      RETENTION_MS: "${RETENTION_MS:-1800000}"
+      AUTO_UPDATE_YTDLP: "${AUTO_UPDATE_YTDLP:-true}"
+      RATE_LIMIT_INFO_PER_MIN: "${RATE_LIMIT_INFO_PER_MIN:-10}"
+      RATE_LIMIT_CLIPS_PER_HOUR: "${RATE_LIMIT_CLIPS_PER_HOUR:-5}"
+      ALLOW_ONLY_CC_OR_OWN: "${ALLOW_ONLY_CC_OR_OWN:-false}"
+      DMCA_CONTACT_EMAIL: "${DMCA_CONTACT_EMAIL:-dmca@clipshort.example}"
+      YTDLP_COOKIES_FILE: "${YTDLP_COOKIES_FILE:-}"
+    volumes:
+      - clipshort_tmp:/tmp/clipshort
+      # Optional: mount a cookies.txt file if needed for bot-check mitigation
+      # - ./cookies.txt:/app/cookies.txt:ro
+
+volumes:
+  clipshort_tmp:
